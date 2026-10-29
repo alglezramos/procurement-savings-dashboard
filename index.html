@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Savings Program Control Tower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+html{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+
+/* Layout: program header band → filter bar → tabbed workspace (overview / portfolio / risks / timeline / process) + project drawer */
+:root{
+  --bg:#F2F5F4; --surface:#FFFFFF; --surface2:#E8EDEB; --ink:#13201C; --muted:#5A6A64; --line:#D4DCD8;
+  --accent:#1D5A73; --accent-soft:#D5E5EB; --accent-ink:#FFFFFF;
+  --good:#2C7A4D; --good-soft:#DBEEE2; --warn:#A86F12; --warn-soft:#F5E7CC; --bad:#B23A30; --bad-soft:#F4DBD7;
+  --s0:#CCD9DE; --s1:#A8C2CD; --s2:#7FA6B7; --s3:#56889F; --s4:#336D86; --s5:#1D5A73;
+  --plan:#8A9A94;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#151D1A; --surface2:#1D2723; --ink:#E2EAE6; --muted:#93A39D; --line:#2A3631;
+  --accent:#6DB2CE; --accent-soft:#1B3540; --accent-ink:#0E1412;
+  --good:#5DBA84; --good-soft:#18301F; --warn:#E0A64A; --warn-soft:#33270F; --bad:#EA7B6F; --bad-soft:#3A1C18;
+  --s0:#2A3C44; --s1:#325262; --s2:#3E6B80; --s3:#4E87A0; --s4:#61A3BF; --s5:#8BC5DD; --plan:#71817B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#151D1A; --surface2:#1D2723; --ink:#E2EAE6; --muted:#93A39D; --line:#2A3631;
+  --accent:#6DB2CE; --accent-soft:#1B3540; --accent-ink:#0E1412;
+  --good:#5DBA84; --good-soft:#18301F; --warn:#E0A64A; --warn-soft:#33270F; --bad:#EA7B6F; --bad-soft:#3A1C18;
+  --s0:#2A3C44; --s1:#325262; --s2:#3E6B80; --s3:#4E87A0; --s4:#61A3BF; --s5:#8BC5DD; --plan:#71817B; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num,td.n,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Header */
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-block:20px 16px}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-size:clamp(24px,3.4vw,34px);font-weight:750;font-stretch:88%;letter-spacing:-.01em;line-height:1.05;margin-top:4px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:13px;margin-top:6px}
+.meta b{color:var(--ink);font-weight:600}
+.sample{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:2px 7px;border-radius:3px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{background:transparent;border:0;padding:6px 11px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+
+/* Filter + tabs */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between;padding-block:8px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{padding:8px 12px;text-decoration:none;color:var(--muted);font-weight:600;font-size:13px;border-radius:var(--r);white-space:nowrap}
+nav.tabs a:hover{color:var(--ink);background:var(--surface2)}
+nav.tabs a[aria-current="page"]{color:var(--accent-ink);background:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters label{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.filters select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;font-size:13px;max-width:180px}
+.linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;font-size:12px;font-weight:600;padding:4px}
+
+main{padding-block:20px 48px}
+section.view{display:grid;gap:16px}
+.grid{display:grid;gap:16px}
+.g-kpi{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))}
+.g-3{grid-template-columns:1.4fr 1fr}
+@media (max-width:900px){.g-3{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel h2{font-size:16px;font-weight:700;font-stretch:95%;display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.panel h2 small{font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--muted)}
+.panel .sub{color:var(--muted);font-size:12.5px;margin:2px 0 12px}
+
+/* KPI */
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:4px;align-content:start}
+.kpi .k-l{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.kpi .k-v{font-family:var(--f-display);font-size:28px;font-weight:700;font-stretch:85%;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .k-s{font-size:12.5px;color:var(--muted)}
+.meter{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:4px;position:relative}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.up{color:var(--good);font-weight:600}.down{color:var(--bad);font-weight:600}.amb{color:var(--warn);font-weight:600}
+
+/* Insights */
+.insights{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.insights li{display:grid;grid-template-columns:10px 1fr;gap:10px;align-items:start;font-size:13.5px}
+.insights li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--accent)}
+.insights li.bad::before{background:var(--bad)}.insights li.warn::before{background:var(--warn)}.insights li.good::before{background:var(--good)}
+
+/* Charts */
+svg{display:block;max-width:100%}
+.ax{fill:var(--muted);font:11px var(--f-mono)}
+.axl{stroke:var(--line);stroke-width:1}
+.lbl{fill:var(--ink);font:12px var(--f-body)}
+.lbl-m{fill:var(--muted);font:11px var(--f-body)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:4px;border-radius:2px;display:inline-block}
+.legend i.dash{background:repeating-linear-gradient(90deg,var(--plan) 0 4px,transparent 4px 7px)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* Tables */
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--ink)}
+th[aria-sort="ascending"]::after{content:" ↑"}th[aria-sort="descending"]::after{content:" ↓"}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.n,th.n{text-align:right}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--surface2)}
+.pname{font-weight:600}
+.pid{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.chip{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.chip.g{color:var(--good);background:var(--good-soft)}.chip.a{color:var(--warn);background:var(--warn-soft)}.chip.r{color:var(--bad);background:var(--bad-soft)}
+.chip.n{color:var(--muted);background:var(--surface2)}
+.tag{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:1px 6px;border-radius:3px;white-space:nowrap}
+.pbar{display:flex;align-items:center;gap:8px;min-width:110px}
+.pbar .t{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.pbar .t i{display:block;height:100%}
+.tfoot td{font-weight:600;border-bottom:0;border-top:2px solid var(--ink)}
+
+/* Heatmap */
+.heat{display:grid;grid-template-columns:auto repeat(5,minmax(44px,1fr));gap:3px;font-size:11px}
+.heat .c{aspect-ratio:1.5;max-width:100%;border-radius:3px;display:grid;place-items:center;font:600 13px var(--f-mono);color:var(--ink);border:0;cursor:default}
+.heat .c.has{cursor:pointer}
+.heat .c[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+.heat .yl,.heat .xl{color:var(--muted);display:grid;place-items:center;text-align:center;font-family:var(--f-mono)}
+.heat .yl{justify-items:end;padding-right:6px}
+.z1{background:var(--good-soft)}.z2{background:color-mix(in srgb,var(--warn-soft) 60%,var(--good-soft))}.z3{background:var(--warn-soft)}.z4{background:color-mix(in srgb,var(--bad-soft) 55%,var(--warn-soft))}.z5{background:var(--bad-soft)}
+
+/* Drawer */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0 / .35);z-index:20}
+aside.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:21;overflow-y:auto;
+  padding:calc(20px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) 20px;display:grid;gap:16px;align-content:start;box-shadow:-12px 0 32px rgb(0 0 0 / .12)}
+.drawer h3{font-size:22px;font-weight:720;font-stretch:88%}
+.drawer .close{justify-self:end;background:var(--surface2);border:0;border-radius:var(--r);padding:6px 10px;cursor:pointer;font-weight:600;font-size:12px}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:13px}
+dl.kv dt{color:var(--muted)}dl.kv dd{margin:0;font-weight:500}
+.mini{display:grid;gap:8px}
+.mini .row{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:12.5px}
+.mini .row .t{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.mini .row .t i{display:block;height:100%}
+.riskcard{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:4px;font-size:13px}
+.riskcard .h{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.small{font-size:12px;color:var(--muted)}
+.method dt{font-weight:600;margin-top:10px}
+.method dd{margin:2px 0 0;color:var(--muted);max-width:70ch}
+.method{margin:0}
+footer{color:var(--muted);font-size:12px;padding-block:0 32px}
+@media (prefers-reduced-motion:no-preference){.meter i,.pbar .t i{transition:width .4s ease}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow" data-i="eyebrow">Procurement Transformation Office · FY2026</div>
+      <h1 data-i="title">Savings Program Control Tower</h1>
+      <div class="meta">
+        <span><span data-i="lead">Program lead</span>: <b>A. González</b></span>
+        <span><span data-i="asof">Data as of</span>: <b class="mono">29 Oct 2026</b></span>
+        <span><span data-i="cur">Currency</span>: <b>EUR k</b></span>
+        <span class="sample" data-i="sample">Sample data</span>
+      </div>
+    </div>
+    <div class="seg" role="group" aria-label="Language">
+      <button type="button" id="lang-en" aria-pressed="true">EN</button>
+      <button type="button" id="lang-es" aria-pressed="false">ES</button>
+    </div>
+  </div>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <nav class="tabs" aria-label="Sections">
+      <a href="#overview" data-tab="overview" data-i="t_over">Overview</a>
+      <a href="#portfolio" data-tab="portfolio" data-i="t_port">Portfolio</a>
+      <a href="#risks" data-tab="risks" data-i="t_risk">Risks</a>
+      <a href="#timeline" data-tab="timeline" data-i="t_time">Timeline</a>
+      <a href="#process" data-tab="process" data-i="t_proc">Process &amp; method</a>
+    </nav>
+    <div class="filters">
+      <label><span data-i="f_cat">Category</span> <select id="f-cat"></select></label>
+      <label><span data-i="f_own">Owner</span> <select id="f-own"></select></label>
+      <button type="button" class="linkbtn" id="f-reset" data-i="reset">Reset</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="view" id="v-overview"></section>
+  <section class="view" id="v-portfolio" hidden></section>
+  <section class="view" id="v-risks" hidden></section>
+  <section class="view" id="v-timeline" hidden></section>
+  <section class="view" id="v-process" hidden></section>
+</main>
+<footer class="wrap"><span data-i="foot">Illustrative portfolio with fictitious data, built to demonstrate a savings governance model. Figures in EUR thousands.</span></footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Project detail"></aside>
+
+<script>
+(function(){
+"use strict";
+/* ---------------- DATA (fictitious) ---------------- */
+const ASOF = new Date(2026,9,29), ASOF_M = 10; // October closed
+const STAGES = [
+  {k:"L0",conf:.10,en:"Idea",es:"Idea"},
+  {k:"L1",conf:.25,en:"Validated",es:"Validado"},
+  {k:"L2",conf:.50,en:"Sourcing",es:"Sourcing"},
+  {k:"L3",conf:.70,en:"Negotiation",es:"Negociación"},
+  {k:"L4",conf:.90,en:"Contracted",es:"Contratado"},
+  {k:"L5",conf:1.0,en:"Realizing",es:"En realización"}
+];
+const CATS = {DM:{en:"Direct materials",es:"Materiales directos"},PK:{en:"Packaging",es:"Empaque"},LG:{en:"Logistics",es:"Logística"},
+  IN:{en:"Indirect & services",es:"Indirectos y servicios"},IT:{en:"IT & telecom",es:"IT y telecom"},EN:{en:"Energy",es:"Energía"},
+  CC:{en:"Cross-category",es:"Transversal"}};
+const LEVERS = {CON:{en:"Volume consolidation",es:"Consolidación de volumen"},TEN:{en:"Competitive tender",es:"Licitación competitiva"},
+  SPEC:{en:"Spec change (VA/VE)",es:"Cambio de especificación (VA/VE)"},DEM:{en:"Demand management",es:"Gestión de demanda"},
+  REN:{en:"Renegotiation",es:"Renegociación"},LCC:{en:"Best-cost country sourcing",es:"Sourcing en país de bajo costo"},
+  MVB:{en:"Make vs. buy",es:"Make vs. buy"},PAY:{en:"Payment terms",es:"Condiciones de pago"},STR:{en:"Contract structure",es:"Estructura contractual"}};
+const OWNERS = {KW:"K. Weber",MF:"M. Fischer",LJ:"L. Janssens",SR:"S. Romero",AV:"A. de Vries"};
+// rs = month (2026) in which savings start hitting P&L; null = 2027
+const P = [
+ {id:"P01",n:"Steel coil supplier consolidation",c:"DM",o:"KW",l:"CON",t:"hard",b:8400,tg:520,fc:560,st:5,s:"2026-01-12",e:"2026-05-29",rs:4,fv:true},
+ {id:"P02",n:"Corrugated packaging tender (EU)",c:"PK",o:"MF",l:"TEN",t:"hard",b:3900,tg:310,fc:335,st:5,s:"2026-02-02",e:"2026-06-15",rs:6,fv:true},
+ {id:"P03",n:"Road freight re-tender DE–BE–NL",c:"LG",o:"LJ",l:"TEN",t:"hard",b:6200,tg:480,fc:450,st:5,s:"2026-01-19",e:"2026-05-08",rs:5,fv:true},
+ {id:"P04",n:"Resin grade harmonisation",c:"DM",o:"KW",l:"SPEC",t:"hard",b:5100,tg:410,fc:380,st:3,s:"2026-04-06",e:"2026-11-27",rs:12,fv:false},
+ {id:"P05",n:"Energy PPA – Zaragoza plant",c:"EN",o:"SR",l:"STR",t:"hard",b:4600,tg:600,fc:520,st:3,s:"2026-03-02",e:"2026-12-18",rs:null,fv:false},
+ {id:"P06",n:"SaaS licence rationalisation",c:"IT",o:"AV",l:"DEM",t:"hard",b:2300,tg:260,fc:290,st:5,s:"2026-02-16",e:"2026-07-31",rs:7,fv:true},
+ {id:"P07",n:"MRO tail-spend catalogue",c:"IN",o:"SR",l:"CON",t:"hard",b:1800,tg:180,fc:150,st:4,s:"2026-05-04",e:"2026-10-30",rs:9,fv:true},
+ {id:"P08",n:"Ocean freight index-linked contracts",c:"LG",o:"LJ",l:"REN",t:"hard",b:3500,tg:240,fc:225,st:2,s:"2026-07-06",e:"2027-01-29",rs:null,fv:false},
+ {id:"P09",n:"Pallet pooling programme",c:"PK",o:"MF",l:"MVB",t:"hard",b:1200,tg:140,fc:120,st:1,s:"2026-09-01",e:"2027-03-31",rs:null,fv:false},
+ {id:"P10",n:"Payment terms 60→90 days",c:"CC",o:"SR",l:"PAY",t:"soft",b:22000,tg:350,fc:330,st:5,s:"2026-01-05",e:"2026-09-30",rs:3,fv:true},
+ {id:"P11",n:"Telecom & mobile fleet renegotiation",c:"IT",o:"AV",l:"REN",t:"hard",b:900,tg:90,fc:105,st:5,s:"2026-03-09",e:"2026-06-26",rs:6,fv:true},
+ {id:"P12",n:"Fasteners dual-sourcing (Morocco)",c:"DM",o:"KW",l:"LCC",t:"hard",b:2700,tg:230,fc:190,st:2,s:"2026-06-01",e:"2027-02-26",rs:null,fv:false},
+ {id:"P13",n:"Facility services bundling",c:"IN",o:"SR",l:"CON",t:"hard",b:2100,tg:160,fc:150,st:1,s:"2026-09-14",e:"2027-04-30",rs:null,fv:false},
+ {id:"P14",n:"Warehouse automation leasing",c:"LG",o:"LJ",l:"MVB",t:"hard",b:1500,tg:120,fc:60,st:0,s:"2026-11-02",e:"2027-06-30",rs:null,fv:false}
+];
+const R = [
+ {id:"R01",p:"P05",pr:60,im:250,o:"SR",s:"mit",en:"Power price volatility delays PPA signature",es:"La volatilidad del precio eléctrico retrasa la firma del PPA",
+  men:"Hedge 40% of volume; pre-approved price corridor from the board",mes:"Cobertura del 40% del volumen; corredor de precios preaprobado por el consejo"},
+ {id:"R02",p:"P04",pr:45,im:180,o:"KW",s:"open",en:"Customer requalification of new resin grade takes >12 weeks",es:"La recalificación del nuevo grado de resina con clientes toma >12 semanas",
+  men:"Early PPAP with top-3 customers; run tests in parallel",mes:"PPAP temprano con los 3 clientes principales; pruebas en paralelo"},
+ {id:"R03",p:"P08",pr:35,im:90,o:"LJ",s:"open",en:"Carrier capacity tightens during Q4 peak",es:"La capacidad de navieras se reduce en el pico del Q4",
+  men:"Dual award plus a spot-rate cap clause",mes:"Adjudicación dual y cláusula de tope a tarifa spot"},
+ {id:"R04",p:"P12",pr:30,im:120,o:"KW",s:"open",en:"New supplier fails quality audit",es:"El nuevo proveedor no supera la auditoría de calidad",
+  men:"Pre-audit with SQE; incumbent keeps 30% share",mes:"Pre-auditoría con SQE; el proveedor actual mantiene el 30%"},
+ {id:"R05",p:"P01",pr:25,im:60,o:"KW",s:"mit",en:"Savings leakage from off-contract buying at plants",es:"Fuga de ahorros por compras fuera de contrato en plantas",
+  men:"Monthly PO compliance report; block non-contract vendors in ERP",mes:"Reporte mensual de cumplimiento de OC; bloqueo de proveedores fuera de contrato en el ERP"},
+ {id:"R06",p:"P10",pr:40,im:70,o:"SR",s:"mit",en:"SME suppliers push back on 90-day terms",es:"Proveedores pyme rechazan pago a 90 días",
+  men:"Offer supply-chain finance programme",mes:"Ofrecer programa de supply-chain finance (confirming)"},
+ {id:"R07",p:"P06",pr:20,im:40,o:"AV",s:"open",en:"Shadow IT renews licences outside the contract",es:"Shadow IT renueva licencias fuera del contrato",
+  men:"SaaS spend monitoring and a shared renewal calendar",mes:"Monitoreo de gasto SaaS y calendario compartido de renovaciones"},
+ {id:"R08",p:"P09",pr:50,im:45,o:"MF",s:"open",en:"Pool partner lacks depot coverage in Iberia",es:"El operador de pool no tiene cobertura de depósitos en Iberia",
+  men:"Hybrid model: pool in DE/BE, owned pallets in ES",mes:"Modelo híbrido: pool en DE/BE, pallets propios en ES"},
+ {id:"R09",p:"P02",pr:55,im:85,o:"MF",s:"mit",en:"Paper price index rises more than 8%",es:"El índice de precio del papel sube más de 8%",
+  men:"Index-linked clause with cap and floor; quarterly review",mes:"Cláusula indexada con techo y piso; revisión trimestral"},
+ {id:"R10",p:"P13",pr:45,im:50,o:"SR",s:"open",en:"Site managers resist bundling facility services",es:"Los gerentes de sitio se resisten a agrupar servicios",
+  men:"Stakeholder workshops and an SLA scorecard per site",mes:"Talleres con stakeholders y scorecard de SLA por sitio"},
+ {id:"R11",p:"P05",pr:20,im:150,o:"SR",s:"open",en:"Regulatory change to grid tariffs in Spain",es:"Cambio regulatorio en peajes de red en España",
+  men:"Legal review; tariff pass-through clause",mes:"Revisión legal; cláusula de traslado de peajes"},
+ {id:"R12",p:"P07",pr:40,im:35,o:"SR",s:"mit",en:"Catalogue adoption stays below 60%",es:"La adopción del catálogo se queda por debajo del 60%",
+  men:"ERP punch-out and requester training",mes:"Punch-out en el ERP y formación a solicitantes"},
+ {id:"R13",p:"P03",pr:15,im:60,o:"LJ",s:"closed",en:"Incumbent carrier exits two lanes",es:"El transportista actual abandona dos rutas",
+  men:"Backup carrier contracted",mes:"Transportista de respaldo contratado"}
+];
+const PROGRAM_TARGET = 4000;
+// In-year P&L plan, cumulative by month (EUR k)
+const PLAN = [15,45,110,210,340,490,640,790,950,1130,1340,1550];
+
+/* ---------------- I18N ---------------- */
+const T = {
+ en:{eyebrow:"Procurement Transformation Office · FY2026",title:"Savings Program Control Tower",lead:"Program lead",asof:"Data as of",cur:"Currency",sample:"Sample data",
+  t_over:"Overview",t_port:"Portfolio",t_risk:"Risks",t_time:"Timeline",t_proc:"Process & method",f_cat:"Category",f_own:"Owner",reset:"Reset",all:"All",
+  foot:"Illustrative portfolio with fictitious data, built to demonstrate a savings governance model. Figures in EUR thousands.",
+  k_target:"Annualised target",k_fc:"Pipeline forecast",k_ra:"Risk-adjusted",k_real:"Realized YTD (P&L)",k_emv:"Value at risk",k_health:"Project health",
+  of_target:"of target",gap:"gap",projects:"projects",vs_plan:"vs in-year plan",open_risks:"open risks, expected value",hard:"hard",soft:"soft",
+  ins:"What needs attention",curve:"In-year realization vs plan",curve_s:"Cumulative savings hitting P&L, EUR k. Nov–Dec is a confidence-weighted forecast.",
+  l_actual:"Actual",l_fcst:"Forecast",l_plan:"Plan",funnel:"Pipeline by stage",funnel_s:"Forecast vs. risk-adjusted value at each stage-gate.",
+  bycat:"Savings by category",bycat_s:"Target, forecast and realized YTD.",l_target:"Target",l_real:"Realized YTD",l_ra:"Risk-adjusted",
+  owners:"Owner scorecard",toprisk:"Top risks by expected value",
+  c_id:"ID",c_proj:"Project",c_cat:"Category",c_own:"Owner",c_lever:"Lever",c_stage:"Stage",c_conf:"Conf.",c_base:"Spend baseline",c_tg:"Target",c_fc:"Forecast",
+  c_ra:"Risk-adj.",c_real:"Realized",c_health:"Health",c_fv:"Finance validated",c_type:"Type",total:"Total",c_n:"Projects",c_pct:"% of target",
+  port_h:"Savings project portfolio",port_s:"Click a row to open the project. Click a column header to sort.",
+  heat_h:"Risk heat map",heat_s:"Probability × impact. Click a cell to filter the register.",prob:"Probability",impact:"Impact (EUR k)",
+  reg_h:"Risk register",reg_s:"Expected value (EMV) = probability × impact.",c_risk:"Risk",c_prob:"Probability",c_imp:"Impact",c_emv:"EMV",c_mit:"Mitigation",c_status:"Status",
+  s_open:"Open",s_mit:"Mitigating",s_closed:"Closed",clear:"Clear cell filter",
+  gantt_h:"Project timeline",gantt_s:"Execution window per project; bar colour = stage, marker = savings start in P&L. Click a bar for detail.",today:"Today",pnl:"P&L start",
+  flow_h:"Stage-gate process",flow_s:"Live counts and forecast value currently sitting at each stage.",
+  g1:"G1 · Category council",g2:"G2 · CPO signs business case",g3:"G3 · Sourcing strategy approved",g4:"G4 · Award + Finance baseline",g5:"G5 · First PO at new price",
+  loop:"No award / re-scope",method_h:"Savings methodology",
+  d_profile:"Profile",d_values:"Savings",d_risks:"Risks on this project",d_none:"No risks logged.",d_dates:"Execution window",d_pnl:"Savings start in P&L",d_2027:"2027",close:"Close",
+  yes:"Yes",no:"Pending",h_g:"On track",h_a:"Watch",h_r:"At risk",
+  i_gap:(g,p)=>`Risk-adjusted pipeline is <b>${g}</b> short of the annual target (${p} covered). Stage-gate L0–L1 ideas are needed to close it.`,
+  i_ok:(g)=>`Risk-adjusted pipeline exceeds the target by <b>${g}</b>.`,
+  i_plan:(d,a)=>d<0?`Realized savings are <b>${a}</b> behind the in-year plan at end of October.`:`Realized savings are <b>${a}</b> ahead of the in-year plan at end of October.`,
+  i_risk:(r,p,v)=>`Largest exposure: <b>${r}</b> on ${p} (EMV ${v}).`,
+  i_red:(n,l)=>`${n} project(s) flagged at risk: ${l}.`,
+  i_fv:(n)=>`${n} contracted/realizing project(s) still waiting for Finance validation of the baseline.`,
+  i_conc:(o,p)=>`${o} owns ${p} of the forecast. Check bandwidth before adding new waves.`
+ },
+ es:{eyebrow:"Oficina de Transformación de Compras · FY2026",title:"Torre de control del programa de ahorros",lead:"Líder del programa",asof:"Datos al",cur:"Moneda",sample:"Datos de ejemplo",
+  t_over:"Resumen",t_port:"Portafolio",t_risk:"Riesgos",t_time:"Cronograma",t_proc:"Proceso y método",f_cat:"Categoría",f_own:"Responsable",reset:"Limpiar",all:"Todos",
+  foot:"Portafolio ilustrativo con datos ficticios, creado para demostrar un modelo de gobierno de ahorros. Cifras en miles de EUR.",
+  k_target:"Meta anualizada",k_fc:"Pronóstico del pipeline",k_ra:"Ajustado por riesgo",k_real:"Realizado YTD (P&L)",k_emv:"Valor en riesgo",k_health:"Salud de proyectos",
+  of_target:"de la meta",gap:"brecha",projects:"proyectos",vs_plan:"vs plan del año",open_risks:"riesgos abiertos, valor esperado",hard:"hard",soft:"soft",
+  ins:"Qué requiere atención",curve:"Realización del año vs plan",curve_s:"Ahorro acumulado que impacta el P&L, miles EUR. Nov–Dic es pronóstico ponderado por confianza.",
+  l_actual:"Real",l_fcst:"Pronóstico",l_plan:"Plan",funnel:"Pipeline por etapa",funnel_s:"Pronóstico vs. valor ajustado por riesgo en cada stage-gate.",
+  bycat:"Ahorros por categoría",bycat_s:"Meta, pronóstico y realizado YTD.",l_target:"Meta",l_real:"Realizado YTD",l_ra:"Ajustado por riesgo",
+  owners:"Scorecard por responsable",toprisk:"Principales riesgos por valor esperado",
+  c_id:"ID",c_proj:"Proyecto",c_cat:"Categoría",c_own:"Responsable",c_lever:"Palanca",c_stage:"Etapa",c_conf:"Conf.",c_base:"Gasto base",c_tg:"Meta",c_fc:"Pronóstico",
+  c_ra:"Ajust. riesgo",c_real:"Realizado",c_health:"Salud",c_fv:"Validado por Finanzas",c_type:"Tipo",total:"Total",c_n:"Proyectos",c_pct:"% de meta",
+  port_h:"Portafolio de proyectos de ahorro",port_s:"Haz clic en una fila para abrir el proyecto. Clic en un encabezado para ordenar.",
+  heat_h:"Mapa de calor de riesgos",heat_s:"Probabilidad × impacto. Haz clic en una celda para filtrar el registro.",prob:"Probabilidad",impact:"Impacto (miles EUR)",
+  reg_h:"Registro de riesgos",reg_s:"Valor esperado (EMV) = probabilidad × impacto.",c_risk:"Riesgo",c_prob:"Probabilidad",c_imp:"Impacto",c_emv:"EMV",c_mit:"Mitigación",c_status:"Estado",
+  s_open:"Abierto",s_mit:"Mitigando",s_closed:"Cerrado",clear:"Quitar filtro de celda",
+  gantt_h:"Cronograma de proyectos",gantt_s:"Ventana de ejecución por proyecto; color = etapa, marcador = inicio del ahorro en P&L. Clic en una barra para ver detalle.",today:"Hoy",pnl:"Inicio P&L",
+  flow_h:"Proceso stage-gate",flow_s:"Conteo y valor pronosticado que hay hoy en cada etapa.",
+  g1:"G1 · Consejo de categoría",g2:"G2 · CPO aprueba business case",g3:"G3 · Estrategia de sourcing aprobada",g4:"G4 · Adjudicación + línea base Finanzas",g5:"G5 · Primera OC a nuevo precio",
+  loop:"Sin adjudicación / re-scope",method_h:"Metodología de ahorros",
+  d_profile:"Perfil",d_values:"Ahorros",d_risks:"Riesgos del proyecto",d_none:"Sin riesgos registrados.",d_dates:"Ventana de ejecución",d_pnl:"Inicio del ahorro en P&L",d_2027:"2027",close:"Cerrar",
+  yes:"Sí",no:"Pendiente",h_g:"En curso",h_a:"Vigilar",h_r:"En riesgo",
+  i_gap:(g,p)=>`El pipeline ajustado por riesgo está <b>${g}</b> por debajo de la meta anual (${p} cubierto). Se necesitan nuevas ideas L0–L1 para cerrar la brecha.`,
+  i_ok:(g)=>`El pipeline ajustado por riesgo supera la meta por <b>${g}</b>.`,
+  i_plan:(d,a)=>d<0?`Los ahorros realizados van <b>${a}</b> por detrás del plan del año a cierre de octubre.`:`Los ahorros realizados van <b>${a}</b> por delante del plan del año a cierre de octubre.`,
+  i_risk:(r,p,v)=>`Mayor exposición: <b>${r}</b> en ${p} (EMV ${v}).`,
+  i_red:(n,l)=>`${n} proyecto(s) marcados en riesgo: ${l}.`,
+  i_fv:(n)=>`${n} proyecto(s) contratados o en realización aún esperan validación de la línea base por Finanzas.`,
+  i_conc:(o,p)=>`${o} es responsable del ${p} del pronóstico. Revisar capacidad antes de lanzar nuevas olas.`
+ }
+};
+const METHOD = {
+ en:[["Spend baseline","Last 12 months' price × forecast volume, agreed with the category owner before the sourcing event."],
+  ["Hard vs. soft savings","Hard = price or cost reduction that lowers the P&L against baseline. Soft = cost avoidance or working-capital value (e.g. payment terms), reported separately."],
+  ["Stage confidence","Each stage carries a probability of delivery: L0 10%, L1 25%, L2 50%, L3 70%, L4 90%, L5 100%."],
+  ["Risk-adjusted savings","Forecast × stage confidence. This is the number the program commits to the CFO."],
+  ["Value at risk (EMV)","Sum of probability × impact for open and mitigating risks. Used to prioritise mitigation effort."],
+  ["Realized savings","(Baseline price − actual PO price) × actual volume, validated monthly by Finance. Only realized savings count toward the bonus target."],
+  ["Health rules","At risk: forecast below 80% of target, or EMV above 25% of forecast. Watch: below 90%, or EMV above 12%. Otherwise on track."]],
+ es:[["Línea base de gasto","Precio de los últimos 12 meses × volumen pronosticado, acordado con el responsable de categoría antes del evento de sourcing."],
+  ["Ahorro hard vs. soft","Hard = reducción de precio o costo que baja el P&L frente a la base. Soft = costo evitado o valor de capital de trabajo (p. ej. plazos de pago), reportado aparte."],
+  ["Confianza por etapa","Cada etapa tiene una probabilidad de entrega: L0 10%, L1 25%, L2 50%, L3 70%, L4 90%, L5 100%."],
+  ["Ahorro ajustado por riesgo","Pronóstico × confianza de la etapa. Es la cifra que el programa compromete con el CFO."],
+  ["Valor en riesgo (EMV)","Suma de probabilidad × impacto de riesgos abiertos y en mitigación. Sirve para priorizar la mitigación."],
+  ["Ahorro realizado","(Precio base − precio real de OC) × volumen real, validado mensualmente por Finanzas. Solo el ahorro realizado cuenta para la meta."],
+  ["Reglas de salud","En riesgo: pronóstico menor al 80% de la meta, o EMV mayor al 25% del pronóstico. Vigilar: menor al 90%, o EMV mayor al 12%. Si no, en curso."]]
+};
+
+/* ---------------- STATE ---------------- */
+const st = {lang:"en",cat:"all",own:"all",tab:"overview",sort:{k:"id",d:1},cell:null};
+try{const s=JSON.parse(localStorage.getItem("spct")||"{}");if(s.lang)st.lang=s.lang;}catch(e){}
+const L = k => T[st.lang][k] ?? k;
+const save = () => {try{localStorage.setItem("spct",JSON.stringify({lang:st.lang}))}catch(e){}};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------------- DERIVED ---------------- */
+P.forEach(p=>{
+  p.conf = STAGES[p.st].conf;
+  p.ra = p.fc*p.conf;
+  p.monthly = p.fc/12;
+  p.real = p.rs && p.rs<=ASOF_M ? p.monthly*(ASOF_M-p.rs+1) : 0;
+  p.risks = R.filter(r=>r.p===p.id);
+  p.emv = p.risks.filter(r=>r.s!=="closed").reduce((a,r)=>a+r.pr/100*r.im,0);
+  const cov = p.fc/p.tg, sh = p.emv/p.fc;
+  p.h = (cov<.8||sh>.25)?"r":(cov<.9||sh>.12)?"a":"g";
+});
+R.forEach(r=>r.emv=r.pr/100*r.im);
+
+function filtered(){return P.filter(p=>(st.cat==="all"||p.c===st.cat)&&(st.own==="all"||p.o===st.own));}
+const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+function eur(v,dp){const a=Math.abs(v);if(a>=1000)return "€"+(v/1000).toFixed(dp??2)+"M";return "€"+Math.round(v)+"k";}
+const pct=v=>Math.round(v*100)+"%";
+const cname=c=>CATS[c][st.lang], lname=l=>LEVERS[l][st.lang], sname=i=>STAGES[i][st.lang];
+const scol=i=>`var(--s${i})`;
+const hchip=h=>`<span class="chip ${h}">${L("h_"+h)}</span>`;
+const stPill=i=>`<span class="pill"><i style="background:${scol(i)}"></i>${STAGES[i].k} ${sname(i)}</span>`;
+const fmtD=s=>{const d=new Date(s+"T00:00:00");return d.toLocaleDateString(st.lang==="es"?"es-ES":"en-GB",{day:"2-digit",month:"short",year:"numeric"});};
+const MONTHS={en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],es:["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]};
+
+function series(ps){
+  const act=[],fc=[];let c=0;
+  for(let m=1;m<=12;m++){
+    ps.forEach(p=>{if(p.rs&&p.rs<=m){c+= m<=ASOF_M ? p.monthly : p.monthly*p.conf;}});
+    (m<=ASOF_M?act:fc).push(c);
+  }
+  return {act,fc};
+}
+function niceMax(v){const e=Math.pow(10,Math.floor(Math.log10(v)));const n=v/e;return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*e;}
+
+/* ---------------- OVERVIEW ---------------- */
+function renderOverview(){
+  const ps=filtered(), share = st.cat==="all"&&st.own==="all"?1:sum(ps,p=>p.tg)/sum(P,p=>p.tg);
+  const target = PROGRAM_TARGET*share, fc=sum(ps,p=>p.fc), ra=sum(ps,p=>p.ra), real=sum(ps,p=>p.real);
+  const hard=sum(ps.filter(p=>p.t==="hard"),p=>p.fc), soft=fc-hard;
+  const plan = PLAN.map(v=>v*share), planOct = plan[ASOF_M-1];
+  const rs = R.filter(r=>r.s!=="closed"&&ps.some(p=>p.id===r.p));
+  const emv = sum(rs,r=>r.emv);
+  const hc={g:0,a:0,r:0};ps.forEach(p=>hc[p.h]++);
+  const gap = ra-target, dPlan = real-planOct;
+
+  const kpi=(l,v,s,m)=>`<div class="kpi"><div class="k-l">${l}</div><div class="k-v">${v}</div>${m!=null?`<div class="meter"><i style="width:${Math.min(100,m*100)}%"></i></div>`:""}<div class="k-s">${s}</div></div>`;
+  let h=`<div class="grid g-kpi">
+   ${kpi(L("k_target"),eur(target),`${ps.length} ${L("projects")}`)}
+   ${kpi(L("k_fc"),eur(fc),`<span class="${fc>=target?"up":"amb"}">${pct(fc/target)}</span> ${L("of_target")} · ${L("hard")} ${eur(hard)}, ${L("soft")} ${eur(soft)}`,fc/target)}
+   ${kpi(L("k_ra"),eur(ra),`<span class="${gap>=0?"up":"down"}">${gap>=0?"+":"−"}${eur(Math.abs(gap))}</span> ${L("gap")} · ${pct(ra/target)} ${L("of_target")}`,ra/target)}
+   ${kpi(L("k_real"),eur(real),`<span class="${dPlan>=0?"up":"down"}">${dPlan>=0?"+":"−"}${eur(Math.abs(dPlan))}</span> ${L("vs_plan")} (${eur(planOct)})`,real/planOct)}
+   ${kpi(L("k_emv"),eur(emv),`${rs.length} ${L("open_risks")}`)}
+   <div class="kpi"><div class="k-l">${L("k_health")}</div><div class="k-v">${hc.g}<span class="small"> / ${ps.length}</span></div>
+     <div class="k-s" style="display:flex;gap:6px;flex-wrap:wrap">${hchip("g")} ${hc.g} ${hchip("a")} ${hc.a} ${hchip("r")} ${hc.r}</div></div>
+  </div>`;
+
+  // insights
+  const ins=[];
+  if(ps.length){
+    ins.push(gap<0?{c:"bad",t:L("i_gap")(eur(-gap),pct(ra/target))}:{c:"good",t:L("i_ok")(eur(gap))});
+    ins.push({c:dPlan<0?"warn":"good",t:L("i_plan")(dPlan,eur(Math.abs(dPlan)))});
+    const top=[...rs].sort((a,b)=>b.emv-a.emv)[0];
+    if(top)ins.push({c:"bad",t:L("i_risk")(esc(top[st.lang]),top.p,eur(top.emv))});
+    const reds=ps.filter(p=>p.h==="r");if(reds.length)ins.push({c:"bad",t:L("i_red")(reds.length,reds.map(p=>`${p.id} ${esc(p.n)}`).join("; "))});
+    const nfv=ps.filter(p=>p.st>=4&&!p.fv).length;if(nfv)ins.push({c:"warn",t:L("i_fv")(nfv)});
+    if(st.own==="all"){const by={};ps.forEach(p=>by[p.o]=(by[p.o]||0)+p.fc);const [o,v]=Object.entries(by).sort((a,b)=>b[1]-a[1])[0]||[];if(o&&v/fc>.3)ins.push({c:"warn",t:L("i_conc")(OWNERS[o],pct(v/fc))});}
+  }
+  h+=`<div class="grid g-3">
+   <div class="panel"><h2>${L("curve")}</h2><p class="sub">${L("curve_s")}</p>${curveSVG(ps,plan)}
+     <div class="legend"><span><i style="background:var(--accent)"></i>${L("l_actual")}</span><span><i style="background:var(--s2)"></i>${L("l_fcst")}</span><span><i class="dash"></i>${L("l_plan")}</span></div></div>
+   <div class="panel"><h2>${L("ins")}</h2><p class="sub">${st.lang==="es"?"Generado a partir de los datos filtrados.":"Generated from the filtered data."}</p><ul class="insights">${ins.map(i=>`<li class="${i.c}"><span>${i.t}</span></li>`).join("")}</ul></div>
+  </div>
+  <div class="grid g-2">
+   <div class="panel"><h2>${L("funnel")}</h2><p class="sub">${L("funnel_s")}</p>${funnelSVG(ps)}
+     <div class="legend"><span><i style="background:var(--s1)"></i>${L("c_fc")}</span><span><i style="background:var(--accent)"></i>${L("l_ra")}</span></div></div>
+   <div class="panel"><h2>${L("bycat")}</h2><p class="sub">${L("bycat_s")}</p>${catSVG(ps)}
+     <div class="legend"><span><i style="background:var(--plan)"></i>${L("l_target")}</span><span><i style="background:var(--s2)"></i>${L("c_fc")}</span><span><i style="background:var(--good)"></i>${L("l_real")}</span></div></div>
+  </div>
+  <div class="grid g-2">
+   <div class="panel"><h2>${L("owners")}</h2><p class="sub">&nbsp;</p>${ownerTable(ps)}</div>
+   <div class="panel"><h2>${L("toprisk")}</h2><p class="sub">&nbsp;</p>${riskTable([...rs].sort((a,b)=>b.emv-a.emv).slice(0,5),true)}</div>
+  </div>`;
+  $("#v-overview").innerHTML=h;
+}
+
+function curveSVG(ps,plan){
+  const W=640,H=250,ml=52,mr=16,mt=12,mb=28,iw=W-ml-mr,ih=H-mt-mb;
+  const {act,fc}=series(ps); const all=[...act,...fc,...plan];
+  const ymax=niceMax(Math.max(...all,1)*1.05);
+  const x=m=>ml+(m-.5)*iw/12, y=v=>mt+ih-v/ymax*ih;
+  let g="";
+  for(let i=0;i<=4;i++){const v=ymax*i/4;g+=`<line class="axl" x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${ml-8}" y="${y(v)+4}" text-anchor="end">${eur(v,1)}</text>`;}
+  MONTHS[st.lang].forEach((m,i)=>g+=`<text class="ax" x="${x(i+1)}" y="${H-8}" text-anchor="middle">${m}</text>`);
+  const pPath=plan.map((v,i)=>`${i?"L":"M"}${x(i+1)},${y(v)}`).join("");
+  const aPts=act.map((v,i)=>[x(i+1),y(v)]);
+  const aPath=aPts.map((p,i)=>`${i?"L":"M"}${p[0]},${p[1]}`).join("");
+  const area=`${aPath}L${aPts[aPts.length-1][0]},${y(0)}L${aPts[0][0]},${y(0)}Z`;
+  const fPts=[aPts[aPts.length-1],...fc.map((v,i)=>[x(ASOF_M+i+1),y(v)])];
+  const fPath=fPts.map((p,i)=>`${i?"L":"M"}${p[0]},${p[1]}`).join("");
+  const last=aPts[aPts.length-1], end=fPts[fPts.length-1];
+  const tx=x(ASOF_M)+ (iw/24);
+  return `<div class="scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${L("curve")}">${g}
+   <line x1="${tx}" x2="${tx}" y1="${mt}" y2="${mt+ih}" stroke="var(--muted)" stroke-dasharray="2 3"/>
+   <text class="lbl-m" x="${tx+4}" y="${mt+10}">${L("today")}</text>
+   <path d="${area}" fill="var(--accent)" opacity=".12"/>
+   <path d="${pPath}" fill="none" stroke="var(--plan)" stroke-width="2" stroke-dasharray="5 4"/>
+   <path d="${aPath}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+   <path d="${fPath}" fill="none" stroke="var(--s2)" stroke-width="2.5" stroke-dasharray="1 0"/>
+   <circle cx="${last[0]}" cy="${last[1]}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+   <text class="lbl" x="${last[0]-8}" y="${last[1]-10}" text-anchor="end" font-weight="600">${eur(act[act.length-1])}</text>
+   <circle cx="${end[0]}" cy="${end[1]}" r="4" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"/>
+   <text class="lbl-m" x="${end[0]}" y="${end[1]-10}" text-anchor="end">${eur(fc[fc.length-1])}</text>
+  </svg></div>`;
+}
+function funnelSVG(ps){
+  const W=560,rh=34,ml=130,mr=70,H=STAGES.length*rh+10,iw=W-ml-mr;
+  const d=STAGES.map((s,i)=>{const a=ps.filter(p=>p.st===i);return{i,n:a.length,fc:sum(a,p=>p.fc),ra:sum(a,p=>p.ra)}});
+  const mx=niceMax(Math.max(...d.map(r=>r.fc),1));
+  let g="";
+  d.forEach((r,k)=>{const yy=k*rh+4;
+    g+=`<text class="lbl" x="0" y="${yy+15}"><tspan font-weight="600">${STAGES[r.i].k}</tspan> ${esc(sname(r.i))}</text><text class="lbl-m" x="0" y="${yy+28}">${r.n} ${L("projects")}</text>
+    <rect x="${ml}" y="${yy+3}" width="${Math.max(r.fc/mx*iw,1)}" height="22" rx="3" fill="var(--s1)"/>
+    <rect x="${ml}" y="${yy+9}" width="${Math.max(r.ra/mx*iw,0)}" height="10" rx="2" fill="var(--accent)"/>
+    <text class="ax" x="${ml+r.fc/mx*iw+6}" y="${yy+18}">${eur(r.fc)}</text>`;});
+  return `<div class="scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${L("funnel")}">${g}</svg></div>`;
+}
+function catSVG(ps){
+  const cats=[...new Set(ps.map(p=>p.c))];
+  const d=cats.map(c=>{const a=ps.filter(p=>p.c===c);return{c,tg:sum(a,p=>p.tg),fc:sum(a,p=>p.fc),re:sum(a,p=>p.real)}}).sort((a,b)=>b.tg-a.tg);
+  const W=560,rh=40,ml=150,mr=60,H=d.length*rh+6,iw=W-ml-mr;
+  const mx=niceMax(Math.max(...d.map(r=>Math.max(r.tg,r.fc)),1));
+  let g="";
+  d.forEach((r,k)=>{const yy=k*rh+3;
+    g+=`<text class="lbl" x="0" y="${yy+20}">${esc(cname(r.c))}</text>
+    <rect x="${ml}" y="${yy+4}" width="${r.tg/mx*iw}" height="8" rx="2" fill="var(--plan)" opacity=".55"/>
+    <rect x="${ml}" y="${yy+14}" width="${r.fc/mx*iw}" height="9" rx="2" fill="var(--s2)"/>
+    <rect x="${ml}" y="${yy+25}" width="${Math.max(r.re/mx*iw,0)}" height="9" rx="2" fill="var(--good)"/>
+    <text class="ax" x="${ml+Math.max(r.tg,r.fc)/mx*iw+6}" y="${yy+22}">${eur(r.fc)}</text>`;});
+  return `<div class="scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${L("bycat")}">${g}</svg></div>`;
+}
+function ownerTable(ps){
+  const os=[...new Set(ps.map(p=>p.o))];
+  const rows=os.map(o=>{const a=ps.filter(p=>p.o===o);return{o,n:a.length,tg:sum(a,p=>p.tg),fc:sum(a,p=>p.fc),ra:sum(a,p=>p.ra),re:sum(a,p=>p.real),r:a.filter(p=>p.h==="r").length}}).sort((a,b)=>b.fc-a.fc);
+  return `<div class="scroll"><table><thead><tr><th>${L("c_own")}</th><th class="n">${L("c_n")}</th><th class="n">${L("c_tg")}</th><th class="n">${L("c_ra")}</th><th>${L("c_pct")}</th><th class="n">${L("c_real")}</th></tr></thead><tbody>
+  ${rows.map(r=>{const v=r.ra/r.tg,c=v>=.9?"var(--good)":v>=.7?"var(--warn)":"var(--bad)";return `<tr><td class="pname">${OWNERS[r.o]}</td><td class="n">${r.n}</td><td class="n">${eur(r.tg)}</td><td class="n">${eur(r.ra)}</td>
+   <td><div class="pbar"><span class="t"><i style="width:${Math.min(100,v*100)}%;background:${c}"></i></span><span class="mono small">${pct(v)}</span></div></td><td class="n">${eur(r.re)}</td></tr>`}).join("")}
+  </tbody></table></div>`;
+}
+function riskTable(rs,compact){
+  if(!rs.length)return `<p class="small">${L("d_none")}</p>`;
+  const sc={open:"r",mit:"a",closed:"n"}, sl={open:"s_open",mit:"s_mit",closed:"s_closed"};
+  return `<div class="scroll"><table><thead><tr><th>${L("c_id")}</th><th>${L("c_risk")}</th>${compact?"":`<th>${L("c_proj")}</th>`}<th>${L("c_prob")}</th><th class="n">${L("c_imp")}</th><th class="n">${L("c_emv")}</th>${compact?"":`<th>${L("c_own")}</th><th>${L("c_mit")}</th>`}<th>${L("c_status")}</th></tr></thead><tbody>
+  ${rs.map(r=>`<tr class="click" data-p="${r.p}"><td class="pid">${r.id}</td><td style="min-width:220px">${esc(r[st.lang])}${compact?`<div class="small">${r.p} · ${esc(P.find(p=>p.id===r.p).n)}</div>`:""}</td>
+   ${compact?"":`<td><span class="pid">${r.p}</span> ${esc(P.find(p=>p.id===r.p).n)}</td>`}
+   <td><div class="pbar"><span class="t"><i style="width:${r.pr}%;background:${r.pr>=50?"var(--bad)":r.pr>=30?"var(--warn)":"var(--good)"}"></i></span><span class="mono small">${r.pr}%</span></div></td>
+   <td class="n">${eur(r.im)}</td><td class="n"><b>${eur(r.emv)}</b></td>
+   ${compact?"":`<td style="white-space:nowrap">${OWNERS[r.o]}</td><td style="min-width:240px" class="small">${esc(st.lang==="es"?r.mes:r.men)}</td>`}
+   <td><span class="chip ${sc[r.s]}">${L(sl[r.s])}</span></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+/* ---------------- PORTFOLIO ---------------- */
+function renderPortfolio(){
+  const ps=[...filtered()];
+  const k=st.sort.k,d=st.sort.d;
+  const val={id:p=>p.id,n:p=>p.n,c:p=>cname(p.c),o:p=>OWNERS[p.o],st:p=>p.st,tg:p=>p.tg,fc:p=>p.fc,ra:p=>p.ra,real:p=>p.real,h:p=>({r:0,a:1,g:2})[p.h]};
+  ps.sort((a,b)=>{const x=val[k](a),y=val[k](b);return (x>y?1:x<y?-1:0)*d;});
+  const th=(key,lab,n)=>`<th class="sortable${n?" n":""}" data-sort="${key}" tabindex="0" ${k===key?`aria-sort="${d>0?"ascending":"descending"}"`:""}>${lab}</th>`;
+  $("#v-portfolio").innerHTML=`<div class="panel"><h2>${L("port_h")}<small>${ps.length} ${L("projects")}</small></h2><p class="sub">${L("port_s")}</p>
+  <div class="scroll"><table id="ptable"><thead><tr>${th("id",L("c_id"))}${th("n",L("c_proj"))}${th("c",L("c_cat"))}${th("o",L("c_own"))}<th>${L("c_lever")}</th>${th("st",L("c_stage"))}<th class="n">${L("c_conf")}</th>${th("tg",L("c_tg"),1)}${th("fc",L("c_fc"),1)}${th("ra",L("c_ra"),1)}${th("real",L("c_real"),1)}${th("h",L("c_health"))}<th>${L("c_fv")}</th></tr></thead><tbody>
+  ${ps.map(p=>`<tr class="click" data-p="${p.id}"><td class="pid">${p.id}</td><td style="min-width:220px"><span class="pname">${esc(p.n)}</span> ${p.t==="soft"?`<span class="tag">${L("soft")}</span>`:""}</td><td style="white-space:nowrap">${esc(cname(p.c))}</td><td style="white-space:nowrap">${OWNERS[p.o]}</td>
+   <td class="small" style="white-space:nowrap">${esc(lname(p.l))}</td><td>${stPill(p.st)}</td><td class="n">${pct(p.conf)}</td><td class="n">${eur(p.tg)}</td><td class="n">${eur(p.fc)}</td><td class="n">${eur(p.ra)}</td><td class="n">${eur(p.real)}</td><td>${hchip(p.h)}</td>
+   <td>${p.fv?`<span class="up">✓ ${L("yes")}</span>`:`<span class="small">${L("no")}</span>`}</td></tr>`).join("")}
+  <tr class="tfoot"><td></td><td>${L("total")}</td><td colspan="5"></td><td class="n">${eur(sum(ps,p=>p.tg))}</td><td class="n">${eur(sum(ps,p=>p.fc))}</td><td class="n">${eur(sum(ps,p=>p.ra))}</td><td class="n">${eur(sum(ps,p=>p.real))}</td><td colspan="2"></td></tr>
+  </tbody></table></div></div>`;
+}
+
+/* ---------------- RISKS ---------------- */
+const pb=v=>Math.min(4,Math.floor(v/20)), ib=v=>v<50?0:v<100?1:v<150?2:v<200?3:4;
+function renderRisks(){
+  const ids=new Set(filtered().map(p=>p.id));
+  let rs=R.filter(r=>ids.has(r.p));
+  const grid={};rs.filter(r=>r.s!=="closed").forEach(r=>{const key=pb(r.pr)+"-"+ib(r.im);(grid[key]=grid[key]||[]).push(r)});
+  const pl=["0–20%","20–40%","40–60%","60–80%","80–100%"], il=["<50","50–100","100–150","150–200",">200"];
+  let hm=`<div class="heat" role="grid">`;
+  for(let pi=4;pi>=0;pi--){hm+=`<div class="yl">${pl[pi]}</div>`;
+    for(let ii=0;ii<5;ii++){const key=pi+"-"+ii,a=grid[key]||[],z=Math.min(5,Math.max(1,Math.round((pi+1)*(ii+1)/5)));
+      hm+=`<button type="button" class="c z${z}${a.length?" has":""}" data-cell="${key}" aria-pressed="${st.cell===key}" ${a.length?"":"tabindex=\"-1\""} title="${a.map(r=>r.id).join(", ")}">${a.length||""}</button>`;}}
+  hm+=`<div></div>${il.map(x=>`<div class="xl">${x}</div>`).join("")}</div>
+  <div class="legend" style="justify-content:space-between"><span>↑ ${L("prob")}</span><span>${L("impact")} →</span></div>`;
+  if(st.cell)rs=rs.filter(r=>r.s!=="closed"&&(pb(r.pr)+"-"+ib(r.im))===st.cell);
+  rs.sort((a,b)=>(a.s==="closed")-(b.s==="closed")||b.emv-a.emv);
+  $("#v-risks").innerHTML=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start">
+   <div class="panel" style="max-width:520px"><h2>${L("heat_h")}</h2><p class="sub">${L("heat_s")}</p>${hm}</div>
+   <div class="panel" style="grid-column:span 2;min-width:0"><h2>${L("reg_h")}<small>${st.cell?`<button type="button" class="linkbtn" id="clr">${L("clear")}</button>`:""}</small></h2><p class="sub">${L("reg_s")}</p>${riskTable(rs,false)}</div>
+  </div>`;
+}
+
+/* ---------------- TIMELINE ---------------- */
+function renderTimeline(){
+  const ps=[...filtered()].sort((a,b)=>a.s.localeCompare(b.s));
+  const t0=new Date(2026,0,1),t1=new Date(2027,6,1),span=t1-t0;
+  const W=1100,ml=270,mr=20,rh=30,mt=44,H=mt+ps.length*rh+10,iw=W-ml-mr;
+  const x=d=>ml+(d-t0)/span*iw;
+  let g="";
+  for(let i=0;i<=18;i++){const d=new Date(2026,i,1),xx=x(d);
+    g+=`<line class="axl" x1="${xx}" x2="${xx}" y1="${mt-6}" y2="${H-6}" ${i%3?'opacity=".5"':""}/>`;
+    if(i<18)g+=`<text class="ax" x="${x(new Date(2026,i,15))}" y="${mt-12}" text-anchor="middle">${MONTHS[st.lang][i%12]}</text>`;
+    if(i%12===0&&i<18)g+=`<text class="lbl" font-weight="600" x="${xx+3}" y="14">${2026+i/12}</text>`;}
+  ps.forEach((p,k)=>{const yy=mt+k*rh, a=new Date(p.s+"T00:00:00"), b=new Date(p.e+"T00:00:00");
+    const hc={g:"var(--good)",a:"var(--warn)",r:"var(--bad)"}[p.h];
+    g+=`<g class="gbar" data-p="${p.id}" style="cursor:pointer">
+      <rect x="0" y="${yy}" width="${W}" height="${rh}" fill="transparent"/>
+      <circle cx="6" cy="${yy+15}" r="4" fill="${hc}"/>
+      <text class="ax" x="16" y="${yy+19}">${p.id}</text>
+      <text class="lbl" x="50" y="${yy+19}">${esc(p.n.length>30?p.n.slice(0,29)+"…":p.n)}</text>
+      <rect x="${x(a)}" y="${yy+7}" width="${Math.max(x(b)-x(a),4)}" height="16" rx="3" fill="${scol(p.st)}"/>
+      <text class="ax" x="${x(b)+5}" y="${yy+19}">${STAGES[p.st].k}</text>`;
+    if(p.rs){const rx=x(new Date(2026,p.rs-1,1));g+=`<path d="M${rx},${yy+4} l5,11 l-5,11 l-5,-11z" fill="var(--ink)"><title>${L("pnl")}</title></path>`;}
+    g+=`</g>`;});
+  const tx=x(ASOF);
+  g+=`<line x1="${tx}" x2="${tx}" y1="${mt-6}" y2="${H-4}" stroke="var(--bad)" stroke-width="1.5"/><rect x="${tx-22}" y="${mt-30}" width="44" height="16" rx="3" fill="var(--bad)"/><text x="${tx}" y="${mt-18}" text-anchor="middle" fill="var(--surface)" font-size="11" font-weight="600" font-family="IBM Plex Sans,sans-serif">${L("today")}</text>`;
+  $("#v-timeline").innerHTML=`<div class="panel"><h2>${L("gantt_h")}</h2><p class="sub">${L("gantt_s")}</p>
+   <div class="scroll"><svg viewBox="0 0 ${W} ${H}" style="min-width:880px" role="img" aria-label="${L("gantt_h")}">${g}</svg></div>
+   <div class="legend">${STAGES.map((s,i)=>`<span><i style="background:${scol(i)};height:10px"></i>${s.k} ${sname(i)}</span>`).join("")}<span>◆ ${L("pnl")}</span><span><i style="background:var(--good);width:8px;height:8px;border-radius:50%"></i>/<i style="background:var(--warn);width:8px;height:8px;border-radius:50%"></i>/<i style="background:var(--bad);width:8px;height:8px;border-radius:50%"></i> ${L("c_health")}</span></div></div>`;
+}
+
+/* ---------------- PROCESS ---------------- */
+function renderProcess(){
+  const ps=filtered();
+  const W=1080,H=300,bw=150,bh=96,gap=(W-6*bw)/5,y0=60;
+  const gates=["g1","g2","g3","g4","g5"];
+  let g=`<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>`;
+  STAGES.forEach((s,i)=>{const xx=i*(bw+gap),a=ps.filter(p=>p.st===i);
+    g+=`<rect x="${xx}" y="${y0}" width="${bw}" height="${bh}" rx="6" fill="var(--surface)" stroke="${scol(i)}" stroke-width="2"/>
+     <rect x="${xx}" y="${y0}" width="${bw}" height="26" rx="6" fill="${scol(i)}"/><rect x="${xx}" y="${y0+18}" width="${bw}" height="8" fill="${scol(i)}"/>
+     <text x="${xx+10}" y="${y0+18}" font-family="Archivo,sans-serif" font-weight="700" font-size="13" fill="${i>=3?"var(--surface)":"var(--ink)"}">${s.k} · ${esc(sname(i))}</text>
+     <text class="lbl" x="${xx+10}" y="${y0+50}" font-weight="600" font-size="20" font-family="IBM Plex Mono,monospace">${a.length}</text>
+     <text class="lbl-m" x="${xx+38}" y="${y0+50}">${L("projects")}</text>
+     <text class="lbl" x="${xx+10}" y="${y0+70}" font-family="IBM Plex Mono,monospace">${eur(sum(a,p=>p.fc))}</text>
+     <text class="lbl-m" x="${xx+10}" y="${y0+87}">${L("c_conf")} ${pct(s.conf)}</text>`;
+    if(i<5){const x1=xx+bw+2,x2=xx+bw+gap-3,ym=y0+bh/2;
+      g+=`<line x1="${x1}" y1="${ym}" x2="${x2}" y2="${ym}" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)"/>
+       <path d="M${(x1+x2)/2},${ym-9} l9,9 l-9,9 l-9,-9z" fill="var(--warn-soft)" stroke="var(--warn)"/>`;
+      const lab=L(gates[i]);g+=`<text class="lbl-m" x="${xx+bw+gap/2}" y="${i%2?y0+bh+22:y0-14}" text-anchor="middle">${esc(lab)}</text>`;}
+  });
+  // loop back L3 -> L1
+  const x3=3*(bw+gap)+bw/2, x1=1*(bw+gap)+bw/2, yb=y0+bh;
+  g+=`<path d="M${x3},${yb} V${yb+62} H${x1} V${yb+8}" fill="none" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+   <text class="lbl-m" x="${(x1+x3)/2}" y="${yb+56}" text-anchor="middle" fill="var(--bad)">${L("loop")}</text>`;
+  $("#v-process").innerHTML=`<div class="panel"><h2>${L("flow_h")}</h2><p class="sub">${L("flow_s")}</p>
+   <div class="scroll"><svg viewBox="-4 0 ${W+8} ${H}" style="min-width:860px" role="img" aria-label="${L("flow_h")}">${g}</svg></div></div>
+   <div class="panel"><h2>${L("method_h")}</h2><dl class="method">${METHOD[st.lang].map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("")}</dl></div>`;
+}
+
+/* ---------------- DRAWER ---------------- */
+let lastFocus=null;
+function openDrawer(id){
+  const p=P.find(x=>x.id===id);if(!p)return;lastFocus=document.activeElement;
+  const mx=Math.max(p.tg,p.fc);
+  const row=(l,v,c)=>`<div class="row"><span>${l}</span><span class="t"><i style="width:${v/mx*100}%;background:${c}"></i></span><span class="mono" style="text-align:right">${eur(v)}</span></div>`;
+  const sl={open:"s_open",mit:"s_mit",closed:"s_closed"},sc={open:"r",mit:"a",closed:"n"};
+  $("#drawer").innerHTML=`<button type="button" class="close" id="dclose">${L("close")} ✕</button>
+   <div><div class="pid">${p.id} · ${esc(cname(p.c))}</div><h3>${esc(p.n)}</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${stPill(p.st)} ${hchip(p.h)} <span class="tag">${p.t==="soft"?L("soft"):L("hard")}</span></div></div>
+   <div><div class="eyebrow" style="margin-bottom:8px">${L("d_profile")}</div><dl class="kv">
+     <dt>${L("c_own")}</dt><dd>${OWNERS[p.o]}</dd><dt>${L("c_lever")}</dt><dd>${esc(lname(p.l))}</dd>
+     <dt>${L("c_base")}</dt><dd class="mono">${eur(p.b)}</dd><dt>${L("d_dates")}</dt><dd>${fmtD(p.s)} → ${fmtD(p.e)}</dd>
+     <dt>${L("d_pnl")}</dt><dd>${p.rs?MONTHS[st.lang][p.rs-1]+" 2026":L("d_2027")}</dd><dt>${L("c_fv")}</dt><dd>${p.fv?L("yes"):L("no")}</dd></dl></div>
+   <div><div class="eyebrow" style="margin-bottom:8px">${L("d_values")}</div><div class="mini">
+     ${row(L("c_tg"),p.tg,"var(--plan)")}${row(L("c_fc"),p.fc,"var(--s2)")}${row(L("c_ra")+" ("+pct(p.conf)+")",p.ra,"var(--accent)")}${row(L("c_real"),p.real,"var(--good)")}
+     <div class="small">${L("c_base")}: ${pct(p.fc/p.b)} · EMV ${eur(p.emv)}</div></div></div>
+   <div><div class="eyebrow" style="margin-bottom:8px">${L("d_risks")}</div><div style="display:grid;gap:8px">
+     ${p.risks.length?p.risks.map(r=>`<div class="riskcard"><div class="h"><span>${r.id} · ${esc(r[st.lang])}</span><span class="chip ${sc[r.s]}">${L(sl[r.s])}</span></div>
+       <div class="small mono">${r.pr}% × ${eur(r.im)} = EMV ${eur(r.emv)}</div><div class="small">${esc(st.lang==="es"?r.mes:r.men)}</div></div>`).join(""):`<p class="small">${L("d_none")}</p>`}</div></div>`;
+  $("#drawer").hidden=false;$("#scrim").hidden=false;$("#dclose").focus();
+}
+function closeDrawer(){$("#drawer").hidden=true;$("#scrim").hidden=true;if(lastFocus)lastFocus.focus();}
+
+/* ---------------- WIRING ---------------- */
+function fillFilters(){
+  const cs=[...new Set(P.map(p=>p.c))], os=Object.keys(OWNERS);
+  $("#f-cat").innerHTML=`<option value="all">${L("all")}</option>`+cs.map(c=>`<option value="${c}">${esc(cname(c))}</option>`).join("");
+  $("#f-own").innerHTML=`<option value="all">${L("all")}</option>`+os.map(o=>`<option value="${o}">${OWNERS[o]}</option>`).join("");
+  $("#f-cat").value=st.cat;$("#f-own").value=st.own;
+}
+function applyLang(){
+  document.documentElement.lang=st.lang;
+  document.querySelectorAll("[data-i]").forEach(el=>{const v=T[st.lang][el.dataset.i];if(typeof v==="string")el.textContent=v;});
+  $("#lang-en").setAttribute("aria-pressed",st.lang==="en");$("#lang-es").setAttribute("aria-pressed",st.lang==="es");
+  fillFilters();
+}
+const views={overview:renderOverview,portfolio:renderPortfolio,risks:renderRisks,timeline:renderTimeline,process:renderProcess};
+function render(){
+  Object.keys(views).forEach(k=>{$("#v-"+k).hidden=k!==st.tab;});
+  document.querySelectorAll("nav.tabs a").forEach(a=>{if(a.dataset.tab===st.tab)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
+  views[st.tab]();
+}
+function route(){const h=location.hash.slice(1);st.tab=views[h]?h:"overview";render();}
+
+document.addEventListener("click",e=>{
+  const s=e.target.closest("th.sortable");if(s){const k=s.dataset.sort;st.sort=st.sort.k===k?{k,d:-st.sort.d}:{k,d:1};renderPortfolio();return;}
+  const cell=e.target.closest(".heat .c.has");if(cell){st.cell=st.cell===cell.dataset.cell?null:cell.dataset.cell;renderRisks();return;}
+  if(e.target.id==="clr"){st.cell=null;renderRisks();return;}
+  const row=e.target.closest("[data-p]");if(row&&!e.target.closest("#drawer")){openDrawer(row.dataset.p);return;}
+  if(e.target.id==="dclose"||e.target.id==="scrim")closeDrawer();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&!$("#drawer").hidden)closeDrawer();
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches("th.sortable")){e.preventDefault();e.target.click();}
+});
+$("#f-cat").addEventListener("change",e=>{st.cat=e.target.value;st.cell=null;render();});
+$("#f-own").addEventListener("change",e=>{st.own=e.target.value;st.cell=null;render();});
+$("#f-reset").addEventListener("click",()=>{st.cat="all";st.own="all";st.cell=null;fillFilters();render();});
+$("#lang-en").addEventListener("click",()=>{st.lang="en";save();applyLang();render();});
+$("#lang-es").addEventListener("click",()=>{st.lang="es";save();applyLang();render();});
+window.addEventListener("hashchange",route);
+applyLang();route();
+})();
+</script>
+
+</body>
+</html>

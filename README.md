@@ -2,7 +2,7 @@
 
 Interactive dashboard to govern a portfolio of procurement savings projects, built from the point of view of a **Procurement Program Manager / Transformation Office**.
 
-**Live demo:** enable GitHub Pages (Settings → Pages → Deploy from branch `main` / root) and open `https://<your-user>.github.io/procurement-savings-dashboard/`
+**Live demo:** https://alglezramos.github.io/procurement-savings-dashboard/
 
 > All data is fictitious and for demonstration only. Figures in EUR thousands. UI available in English and Spanish.
 
